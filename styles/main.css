@@ -1,0 +1,14 @@
+body {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+    background-color: rgb(253, 244, 244);
+}
+
+main {
+    flex: 1 0 auto;
+}
+
+.page-footer {
+    background-color: rgb(141, 141, 180);
+}
