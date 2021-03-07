@@ -9,6 +9,12 @@ main {
     flex: 1 0 auto;
 }
 
+.material-icons {
+    padding-right: 20px;
+    margin-top: 5px;
+    position: center;
+}
+
 .page-footer {
     background-color: rgb(141, 141, 180);
 }
