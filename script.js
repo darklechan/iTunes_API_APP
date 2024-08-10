@@ -1,141 +1,88 @@
-//Creo las variables que necesito:
 const button = document.getElementById("submit");
 const input = document.getElementById("input_text");
 const output_list = document.getElementById("output_list");
 const media_player = document.getElementById("media_player");
 
-//añado un evento al botón de buscar:
 button.addEventListener("click", getDataFromApi);
 
-/*
-Con esta función obtengo los datos de la api:
-*/
-
-function getDataFromApi() {
+async function getDataFromApi() {
+  const searchTerm = input.value
+  
   const url =
-    "https://itunes.apple.com/search?term=" + input.value + "&country=es";
+    `https://itunes.apple.com/search?term=${searchTerm}&country=es&media=music&limit=25`;
   fetch(url)
     .then((response) => response.json())
     .then((json) => {
       const data = json;
       renderData(data);
+    }).catch((error) => {
+      console.log(error);
     });
 }
 
-/*
-  Con esta función he intentado hacer lo del array.sort() ya que era lo que había
-  visto en la documentación, pero al intentar añadirlo me salían problemas. No sé
-  si me he complicado mucho y en realidad es más sencillo pero como no me salía
-  he decidido dejarlo. La idea la he sacado de aquí: https://www.sitepoint.com/sort-an-array-of-objects-in-javascript/
-  Ej: data.sort(sortFilesByType("song"));
-  */
 
-// function sortFilesByType(kind) {
-//   return function (a, b) {
-//     if (a[kind] > b[kind]) {
-//       return 1;
-//     } else if (a[kind] < b[kind]) {
-//       return -1;
-//     }
-//     return 0;
-//   };
-// }
-
-/*
-  Con esta función hago el display de los datos de getDataFromApi
-  y los muestro en una lista
-  */
 function renderData(data) {
-  let touchStartX = 0;
-  let touchEndX = 0;
   output_list.innerHTML = "";
   data.results.forEach((song) => {
-    let li = document.createElement("li"); //voy creando lis
-    li.classList.add("collection-item"); //de esta manera se crea igual que en HTML
+    let li = document.createElement("li");
+    li.setAttribute("id", song.trackId);
+    li.classList.add("collection-item");
     li.innerHTML += `
       <span class="center-align""><i class="small material-icons">play_arrow</i></span>
       <span class="title" id="track">${song.artistName} - ${song.trackName}</span>
       `;
     li.addEventListener("click", () => {
-      li.style.backgroundColor = "grey";
-      if(li.previousSibling === null) {
-        console.log("no hay elemento anterior");
-      } else {
-        li.previousSibling.removeAttribute("style");
+      const currentGrey = document.querySelector(".background-grey");
+      if (currentGrey) {
+        currentGrey.classList.remove("background-grey");
+        
       }
-      
-      // li.nextElementSibling.style.backgroundColor = "initial";
-      showMediaPlayer(song); //esto es lo mismo que ponerlo en el html
-    });
-    output_list.appendChild(li);
 
-    /*
-    En esta parte empieza el evento del swipe, funciona un poco de aquella manera
-    pero no he sabido hacerlo mejor, se puede optimizar muchísimo mejor pero no
-    he lo he conseguido. Además el problema que hay es que cuando borras esa canción
-    se queda en autoplay porque es el primer evento que se ejecuta.
-    */
-    li.addEventListener("touchstart", (e) => {
-      touchStartX = e.changedTouches[0].screenX;
+      li.classList.add("background-grey");
+      showMediaPlayer(song, data.results);
     });
-    li.addEventListener("touchend", (e) => {
-      touchEndX = e.changedTouches[0].screenX;
-      if (touchEndX < touchStartX) {
-        // alert('¿Deseas borrar esa canción?');
-        let removeButton = "";
-        removeButton += `
-        <button class="waves-effect btn-small" id="removeBtn">Delete</button>
-        `;
-        li.innerHTML = removeButton;
-        let removeBtn = document.getElementById("removeBtn");
-        removeBtn.addEventListener("click", () => {
-          li.remove();
-        });
-      } else if (touchEndX < touchStartX) {
-        let removeButton = "";
-        li.innerHTML = removeButton;
-      }
-    });
+
+    output_list.appendChild(li);
   });
 }
 
-function showMediaPlayer(song) {
+function showMediaPlayer(song, data) {
   let html = "";
-  if (song.kind === "feature-movie" || song.kind === "music-video") {
-    html += `
+  if (song.kind === "song") {
+     html += `
     <li class="collection-item" id="tracklist">
-    <img src="${song.artworkUrl60}" alt="" class="circle">
+    <img src="${song.artworkUrl60}" alt="" class="circle" id="artistPhoto">
     <span class="title" id="artistname">${song.artistName} - ${song.trackName}</span><br><br>
-    <video controls autoplay id="player" width="300" height="auto" name="media"><source src="${song.previewUrl}" type="audio/x-m4a"</video>
+    <video controls autoplay id="player" width="300" height="auto" name="media"><source id="source" src="${song.previewUrl}" type="audio/x-m4a"></video>
     </li>
     `;
     media_player.innerHTML = html;
-  } else if (song.wrapperType === "audiobook") {
-    let html = "";
-    media_player.innerHTML = html;
-  } else {
-    html += `
-    <li class="collection-item" id="tracklist">
-    <img src="${song.artworkUrl60}" alt="" class="circle">
-    <span class="title" id="artistname">${song.artistName} - ${song.trackName}</span><br><br>
-    <video controls autoplay id="player" width="300" height="50" name="media"><source src="${song.previewUrl}" type="audio/x-m4a"</video>
-    </li>
-    
-    `;
-    media_player.innerHTML = html;
-    /*
-    En este apartado he intentado hacer lo del play pero el problema es que se queda
-    en el mismo elemento y hace un loop de la canción. He probado de varias maneras
-    pero no he conseguido que pasara al siguiente elemento de la lista. Imagino que
-    en lugar de iterar sobre el player, debo iterar sobre la lista y que vaya detectando
-    el final de la canción.
-    */
-    var nextsrc = song.previewUrl;
-    var player = document.getElementById("player");
-    player.onended = function () {
-      for (var i = 0; i < nextsrc.length; i++) {
-        player.play(nextsrc[i]);
-      }
-    };
+
+    nextSongFunction(player, data, song)
+  }
+
+  function nextSongFunction(player, data, currentSong) {
+    player.addEventListener('ended', () => {
+        const currentSongPosition = data.indexOf(currentSong)
+        let nextSong = data[currentSongPosition + 1]
+
+        if (currentSongPosition >= 0 && currentSongPosition < data.length - 1) {
+          let artistImage = document.querySelector("#artistPhoto");
+          artistImage.src = nextSong.artworkUrl60;
+  
+          let artistName = document.querySelector("#artistname");
+          artistName.innerText = nextSong.artistName + ' - ' + nextSong.trackName;
+  
+          document.querySelector('video').src = nextSong.previewUrl;
+
+          player.play()
+          let currentliSong = document.getElementById(currentSong.trackId)
+          currentliSong.classList.remove("background-grey");
+          let liSong = document.getElementById(nextSong.trackId)
+          liSong.classList.add("background-grey");
+        }
+
+        nextSongFunction(player, data, nextSong)
+    })
   }
 }

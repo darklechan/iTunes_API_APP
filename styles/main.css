@@ -18,3 +18,11 @@ main {
 .page-footer {
     background-color: rgb(141, 141, 180);
 }
+
+.center-align {
+    cursor: pointer;
+}
+
+.background-grey {
+    background-color: grey !important;
+}
